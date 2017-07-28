@@ -1,0 +1,52 @@
+---
+title: "Weather Event and the impact on population"
+author: "Abhishek Sinha"
+date: "July 28, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Impact of weather events on population
+
+## Synopsis
+
+## Loading and processing the data
+
+```{r}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2","StormData.csv.bz2")
+
+storm.data <- read.csv("StormData.csv.bz2", header = T)
+```
+
+
+```{r}
+storm.data <- storm.data[,c("EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
+```
+
+Function to replace units
+
+```{r}
+replace_units <- function(x)
+{
+        ifelse(is.na(x),return(1),
+               ifelse(x=='K'|x=='k',return(1000),
+                      ifelse(x=='H'|x=='h',return(100),
+                             ifelse(x=='M'|x=='m',return(1000000),
+                                    ifelse(x=='B'|x=='b',return(1000000000),1)
+                             )
+                      )
+               )
+        )
+        return(1)
+}
+```
+
+```{r}
+storm.data$PROPDMGEXP <- replace_units(storm.data$PROPDMGEXP)
+storm.data$CROPDMGEXP <- replace_units(storm.data$CROPDMGEXP)
+
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
