@@ -7,17 +7,26 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2, quietly = TRUE)
 ```
 
-# Impact of weather events on population
+# Impact of weather events on population health and economy
 
 ## Synopsis
 
+With the data provided by U.S. National Oceanic and Atmospheric Administration on storm, we have performed analysis on the impact of weather event on population health(fatalities and injuries) and economy.  
+
+The results of the analysis points to Tornado and Hail as the biggest weather events to have an impact on health and economy. Tornado has had the highest fatalities and injuries.
+
+Similarly, Hail has impacted the most on Crop Damages, which Tornado has biggest effect on Property Damages.
+
 ## Loading and processing the data
 
-```{r}
-download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2","StormData.csv.bz2")
-
+```{r cache=TRUE}
+if(!file.exists("StormData.csv.bz2"))
+{
+    download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2","StormData.csv.bz2")
+}
 storm.data <- read.csv("StormData.csv.bz2", header = T)
 ```
 
@@ -26,7 +35,9 @@ storm.data <- read.csv("StormData.csv.bz2", header = T)
 storm.data <- storm.data[,c("EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")]
 ```
 
-Function to replace units
+### Function to replace units
+
+Units (H, K, M and B) are defined in the two fields (PROPDMGEXP, CROPDMGEXP). It is important to convert them into numbers for comparision. E.g. H - 100, K - 1000, M - 1000000, B - 1000000000
 
 ```{r}
 replace_units <- function(x)
@@ -44,9 +55,98 @@ replace_units <- function(x)
 }
 ```
 
+### Tidying up data
+
+Update Crop Damage and Property damage appropriately.
+
 ```{r}
 storm.data$PROPDMGEXP <- replace_units(storm.data$PROPDMGEXP)
 storm.data$CROPDMGEXP <- replace_units(storm.data$CROPDMGEXP)
+storm.data$PROPDMG <- storm.data$PROPDMG * storm.data$PROPDMGEXP
+storm.data$CROPDMG <- storm.data$CROPDMG * storm.data$CROPDMGEXP
+storm.data$PROPDMGEXP <- NULL
+storm.data$CROPDMGEXP <- NULL
+
+#Update column names of the dataframe
+colnames(storm.data) <- c("EventType","Fatalities","Injuries","PropertyDamage","CropDamage")
+```
+
+--------------
+
+## Events that are most harmful to population health
+
+### Fatalities  
+Summarize the sum of fatalities by event type and look at top 10 events
+
+```{r}
+fatalitiest.eventtype <- aggregate(Fatalities ~ EventType, data = storm.data, FUN = sum)
+top.event.fatalities <- head(fatalitiest.eventtype[order(-fatalitiest.eventtype$Fatalities),],10)
+```
+
+
+```{r}
+ggplot(top.event.fatalities) + aes(x = EventType, y=Fatalities, fill=EventType) + geom_bar(stat="identity") + 
+    xlab("Weather Events") + ylab("Fatalities") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Injuries  
+Summarize the sum of injuries by event type and look at top 10 events
+
+```{r}
+injuries.eventtype <- aggregate(Injuries ~ EventType, data = storm.data, FUN = sum)
+top.event.injuries <- head(injuries.eventtype[order(-injuries.eventtype$Injuries),],10)
+```
+
+
+```{r}
+ggplot(top.event.injuries) + aes(x = EventType, y=Injuries, fill=EventType) + geom_bar(stat="identity") + 
+    xlab("Weather Events") + ylab("Injuries") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+
+--------------
+
+## Events that had the greatest economic consequences
+
+### Property Damage  
+Summarize the sum of property damage by event type and look at top 10 events
+
+```{r}
+property.damage.eventtype <- aggregate(PropertyDamage ~ EventType, data = storm.data, FUN = sum)
+top.event.prop.damage <- head(property.damage.eventtype[order(-property.damage.eventtype$PropertyDamage),],10)
+head(top.event.prop.damage, 10)
+```
+
+### Crop Damage  
+Summarize the sum of crop damage by event type and look at top 10 events
+
+```{r}
+crop.damage.eventtype <- aggregate(CropDamage ~ EventType, data = storm.data, FUN = sum)
+top.event.crop.damage <- head(crop.damage.eventtype[order(-crop.damage.eventtype$CropDamage),],10)
+head(top.event.crop.damage, 10)
+```
+
+### Overall Damage    
+Summarize the sum of amount of crop and food damage by event type and look at top 5 events
+
+```{r}
+storm.data$CropPropertyDamage <- storm.data$CropDamage + storm.data$PropertyDamage
+damage.eventtype <- aggregate(CropPropertyDamage ~ EventType, data = storm.data, FUN = sum)
+top.event.damage <- head(damage.eventtype[order(-damage.eventtype$CropPropertyDamage),],10)
+```
+
+
+```{r}
+ggplot(top.event.damage) + aes(x = EventType, y=CropPropertyDamage, fill=EventType) + geom_bar(stat="identity") + 
+    xlab("Weather Events") + ylab("Crop and Property Damage") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+
+## Results
+
+The final analysis suggests Tornado being the biggest impactful weather event impacting both health and economy. TSTM Wind, Flash Flood and Hail also has a high impact on economy.
+
+Similarly, Tornado is the highes fatalities and has a similar impact on number of injuries.
